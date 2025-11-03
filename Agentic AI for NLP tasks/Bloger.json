@@ -1,0 +1,391 @@
+{
+  "name": "Bloger",
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        720
+      ],
+      "id": "4bd2abca-7a41-49cb-953b-22bd11181148",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "YfppEHdIzkcMdGR4",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Blog Form",
+        "formDescription": "Provides a structured blog based on the following fields.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Topic",
+              "placeholder": "Topic",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Tone of voice",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Professional "
+                  },
+                  {
+                    "option": "Casual"
+                  },
+                  {
+                    "option": "Social Media"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Target Audience",
+              "placeholder": "Targeted group[",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -180,
+        0
+      ],
+      "id": "65a30325-5754-4750-b667-6eed726582f9",
+      "name": "On form submission",
+      "webhookId": "610cc715-730c-4d5f-9637-34c6f7097a2e",
+      "notesInFlow": true,
+      "notes": "This is the main engine of the newsletter workflow"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=the blog is about {{$json.Topic}}\nthe tone of voice of the blog is {{ $json['Tone of voice'] }}\nthe readers of the blogs are {{ $json['Target Audience'] }}\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a professional blog strategist and AI writing assistant. Upon receiving a form submission, your job is to:\n\nUnderstand the user's topic, goal, and audience.\n\nIdentify the blog’s main message and potential structure.\n\nSuggest 2–3 working titles.\n\nPropose a rough outline with 3–5 sections.\nKeep it engaging, SEO-friendly, and suitable for online readers. Respond clearly and concisely using markdown formatting."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        40,
+        0
+      ],
+      "id": "ab6c1c19-4422-4170-b950-d37a03948411",
+      "name": "Blog Expert"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Your job is to split out the blog outline into individual blog section items. Output each section as a separate object inside a field named blogSections. Each section must include:\n\ntitle: A catchy, SEO-friendly blog section title\n\nsummary: A short summary (2–3 sentences) of what the section will cover\n\nUse the target audience: {{ $(\"On form submission\").item.json['Target Audience'] }}\n\nand the tone of voice: {{ $('On form submission').item.json['Tone of voice'] }}\nEnsure sections follow a logical flow for an engaging long-form blog post.",
+              "role": "system"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        40,
+        220
+      ],
+      "id": "bdc24cf0-4c59-4531-b9f0-d969f1d496de",
+      "name": "Project planner",
+      "credentials": {
+        "openAiApi": {
+          "id": "YfppEHdIzkcMdGR4",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "message.content.blogSections",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ],
+      "id": "33c5f171-6df0-4069-a588-bf56e195df7b",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Your job is to expand this blog section with factual insights. Search online if tools are available. Keep it relevant to the section title and target audience. \nTitle: {{ $json.title }}\nSummary: {{ $json.summary }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        440,
+        220
+      ],
+      "id": "da11c6b1-08e0-4a2e-922e-2b953f8332d1",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        760,
+        100
+      ],
+      "id": "bd0a3e80-5c39-47c6-b768-851e3b909d1a",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        920,
+        100
+      ],
+      "id": "bdd1de17-2b44-4c9e-b4df-6a627eb884e3",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=This is the content you should focus on: {{ $json.data }}\nYou are a professional blog editor.\nYour task is to polish the blog content into a cohesive, well-structured markdown blog post.\nthe structure should have main title, topic for sections and bodies should include bold and highligted words if needed. make the text eye-catching.\nApply the following structure:\n\nUse # for the main blog title\n\nUse ## for section titles\n\nUse **bold** for emphasis\n\nAdd 1 empty line between paragraphs and sections\n\nUnify tone: {{ $('On form submission').item.json['Tone of voice'] }}\nTarget audience: {{ $(\"On form submission\").item.json['Target Audience'] }}\n\nEnsure smooth transitions, clarity, and SEO-friendly formatting.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        800,
+        320
+      ],
+      "id": "0747ffe9-b100-4aea-858e-19298ce096e7",
+      "name": "Editor"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a blog title expert. Generate a single engaging, SEO-optimized blog post title for the following content. Make sure they match the tone: {{ $('On form submission').item.json['Tone of voice'] }} and appeal to the target audience: {{ $(\"On form submission\").item.json['Target Audience'] }}.\nKeep the title under 60 characters.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        820,
+        520
+      ],
+      "id": "66d6badc-b636-4d4a-b258-295e4d50cc7a",
+      "name": "Topic modeler"
+    },
+    {
+      "parameters": {
+        "sendTo": "nlp.yt.rezashokrzad@gmail.com",
+        "subject": "={{ $json.output }}",
+        "message": "={{ $('Editor').item.json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1260,
+        520
+      ],
+      "id": "9ebb644a-5c3a-4e80-aafd-c7da4a03220b",
+      "name": "Blog sender",
+      "webhookId": "a0ac6a90-af93-451b-b7b4-4a1e39d261c1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "t9BuMlrXbxk6XiQv",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Blog Expert",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Topic modeler",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Editor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Blog Expert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Blog Expert": {
+      "main": [
+        [
+          {
+            "node": "Project planner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Project planner": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Editor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Editor": {
+      "main": [
+        [
+          {
+            "node": "Topic modeler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Topic modeler": {
+      "main": [
+        [
+          {
+            "node": "Blog sender",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Blog sender": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fe5d6799-4f3c-4540-abcf-1cd9691e534c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "293b1329f7ad3310306ec72c84e7d696d4c1491aa655036d94ca44eaedd7ff3e"
+  },
+  "id": "SW1qz0UFe8KjC3z5",
+  "tags": []
+}
